@@ -6,3 +6,4 @@ pillow
 torchvision
 lime
 google-generativeai
+python-dotenv
