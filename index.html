@@ -237,7 +237,7 @@
 
       try {
         // Predict API call
-        const predictResponse = await fetch('http://localhost:8000/predict/', {
+        const predictResponse = await fetch('https://cell-gan-report.onrender.com/predict/', {
           method: 'POST',
           body: formData,
         });
@@ -245,7 +245,7 @@
         predictionElement.textContent = predictData;
 
         // LIME API call
-        const limeResponse = await fetch('http://localhost:8000/lime', {
+        const limeResponse = await fetch('https://cell-gan-report.onrender.com/lime', {
           method: 'POST',
           body: formData,
         });
@@ -260,7 +260,7 @@
         limeContainer.appendChild(limeImg);
 
         // Report API call
-        const reportResponse = await fetch('http://localhost:8000/report', {
+        const reportResponse = await fetch('https://cell-gan-report.onrender.com/report', {
           method: 'POST',
           body: formData,
         });
