@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cervical Cancer Image Analysis</title>
+  <style>
+    /* Base styles */
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      margin: 0;
+      padding: 0;
+      line-height: 1.5;
+      color: #333;
+    }
+
+    /* Container */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1rem;
+    }
+
+    /* Typography */
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+    }
+
+    /* Form elements */
+    form {
+      margin-bottom: 1rem;
+    }
+
+    .input {
+      display: block;
+      width: 100%;
+      padding: 0.5rem;
+      margin-bottom: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 0.25rem;
+    }
+
+    .button {
+      background-color: #2563eb;
+      color: white;
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 0.25rem;
+      cursor: pointer;
+      font-weight: 500;
+    }
+
+    .button:hover {
+      background-color: #1d4ed8;
+    }
+
+    .button:disabled {
+      background-color: #93c5fd;
+      cursor: not-allowed;
+    }
+
+    /* Card styles */
+    .grid {
+      display: grid;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .grid-2 {
+      grid-template-columns: 1fr;
+    }
+
+    @media (min-width: 768px) {
+      .grid-2 {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .card {
+      border: 1px solid #e5e7eb;
+      border-radius: 0.5rem;
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .card-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    .card-content {
+      padding: 1.5rem;
+    }
+
+    /* Utility classes */
+    .whitespace-pre-wrap {
+      white-space: pre-wrap;
+    }
+
+    /* Report specific style to handle newlines properly */
+    #report {
+      white-space: pre-line;
+      font-family: monospace;
+      background-color: #f5f5f5;
+      padding: 1rem;
+      border-radius: 0.25rem;
+      overflow: auto;
+      max-height: 400px;
+    }
+
+    img {
+      max-width: 100%;
+      height: auto;
+      display: block;
+      margin: 0 auto;
+    }
+
+    /* Image container */
+    .image-preview {
+      text-align: center;
+      margin-bottom: 1rem;
+      max-height: 300px;
+      overflow: hidden;
+    }
+
+    .image-preview img {
+      max-height: 280px;
+      object-fit: contain;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Cervical Cancer Image Analysis</h1>
+    <form id="analysisForm" class="mb-4">
+      <input type="file" id="imageInput" accept="image/*" class="input" />
+      <button type="submit" id="analyzeBtn" class="button" disabled>Analyze Image</button>
+    </form>
+
+    <!-- Input Image Preview -->
+    <div class="card" style="margin-bottom: 1rem;">
+      <div class="card-header">
+        <h2 class="card-title">Input Image</h2>
+      </div>
+      <div class="card-content">
+        <div class="image-preview" id="imagePreview">
+          <p>No image selected</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Prediction and LIME (2-column grid) -->
+    <div class="grid grid-2">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Prediction</h2>
+        </div>
+        <div class="card-content">
+          <p id="prediction">No prediction yet</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">LIME Explanation</h2>
+        </div>
+        <div class="card-content">
+          <div id="limeContainer">
+            <p>No LIME image yet</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Report (full width) -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">Report</h2>
+      </div>
+      <div class="card-content">
+        <pre id="report">No report yet</pre>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Get DOM elements
+    const form = document.getElementById('analysisForm');
+    const fileInput = document.getElementById('imageInput');
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    const imagePreview = document.getElementById('imagePreview');
+    const predictionElement = document.getElementById('prediction');
+    const limeContainer = document.getElementById('limeContainer');
+    const reportElement = document.getElementById('report');
+
+    // Enable/disable submit button based on file selection
+    fileInput.addEventListener('change', (event) => {
+      const file = event.target.files[0];
+      analyzeBtn.disabled = !file;
+      
+      // Show image preview when file is selected
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          imagePreview.innerHTML = '';
+          const img = document.createElement('img');
+          img.src = e.target.result;
+          img.alt = 'Selected image';
+          imagePreview.appendChild(img);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        imagePreview.innerHTML = '<p>No image selected</p>';
+      }
+    });
+
+    // Form submission handler
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      
+      const file = fileInput.files[0];
+      if (!file) return;
+
+      // Show loading state
+      analyzeBtn.textContent = 'Analyzing...';
+      analyzeBtn.disabled = true;
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      try {
+        // Predict API call
+        const predictResponse = await fetch('http://localhost:8000/predict/', {
+          method: 'POST',
+          body: formData,
+        });
+        const predictData = await predictResponse.text();
+        predictionElement.textContent = predictData;
+
+        // LIME API call
+        const limeResponse = await fetch('http://localhost:8000/lime', {
+          method: 'POST',
+          body: formData,
+        });
+        const limeBlob = await limeResponse.blob();
+        const limeUrl = URL.createObjectURL(limeBlob);
+        
+        // Update LIME container
+        limeContainer.innerHTML = '';
+        const limeImg = document.createElement('img');
+        limeImg.src = limeUrl;
+        limeImg.alt = 'LIME explanation';
+        limeContainer.appendChild(limeImg);
+
+        // Report API call
+        const reportResponse = await fetch('http://localhost:8000/report', {
+          method: 'POST',
+          body: formData,
+        });
+        const reportData = await reportResponse.json();
+        
+        // Format the report text to properly handle newlines
+        // This replaces JSON.stringify's escaped \n with actual line breaks
+        const formattedReport = JSON.stringify(reportData, null, 2)
+          .replace(/\\n/g, '\n')
+          .replace(/\\"/g, '"');
+        
+        reportElement.textContent = formattedReport;
+      } catch (error) {
+        console.error('Error:', error);
+      } finally {
+        // Reset loading state
+        analyzeBtn.textContent = 'Analyze Image';
+        analyzeBtn.disabled = !fileInput.files || !fileInput.files[0];
+      }
+    });
+  </script>
+</body>
+</html>

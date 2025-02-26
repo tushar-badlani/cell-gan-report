@@ -1,0 +1,8 @@
+fastapi
+torch
+numpy
+uvicorn
+pillow
+torchvision
+lime
+google-generativeai
